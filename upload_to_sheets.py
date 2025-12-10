@@ -7,8 +7,8 @@ import csv
 from datetime import datetime
 
 def upload_csv_to_google_drive():
-    """CSVファイルをGoogle Driveにアップロード"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    """ＣＳＶファイルをGoogle Driveにアップロード"""
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         print("CSVファイルが見つかりません")
@@ -52,7 +52,7 @@ def upload_csv_to_google_drive():
 
 def generate_summary_report():
     """サマリーレポートを生成"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         print("CSVファイルが見つかりません")

@@ -8,7 +8,7 @@ from collections import defaultdict
 
 def analyze_reply_status():
     """返信漏れを分析"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         print("CSVファイルが見つかりません")
@@ -42,7 +42,7 @@ def analyze_reply_status():
 
 def analyze_monetization_opportunities():
     """マネタイズ機会を分析"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         print("CSVファイルが見つかりません")
@@ -84,7 +84,7 @@ def analyze_monetization_opportunities():
 
 def generate_customer_summary():
     """顧客サマリーを生成"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         print("CSVファイルが見つかりません")
@@ -126,7 +126,7 @@ def generate_customer_summary():
 
 def generate_recommendations():
     """おすすめアクションを生成"""
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     if not os.path.exists(csv_file):
         return
