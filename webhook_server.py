@@ -8,8 +8,7 @@ import hashlib
 import base64
 from datetime import datetime
 from flask import Flask, request, abort
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+# Google Sheets libraries removed for lightweight deployment
 import requests
 
 app = Flask(__name__)

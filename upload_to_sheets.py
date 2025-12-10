@@ -3,7 +3,7 @@
 
 import os
 import subprocess
-import pandas as pd
+import csv
 from datetime import datetime
 
 def upload_csv_to_google_drive():
@@ -59,16 +59,12 @@ def generate_summary_report():
         return
     
     try:
-        df = pd.read_csv(csv_file)
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
         
         print("\n=== LINE顧客管理システム サマリー ===")
-        print(f"総メッセージ数: {len(df)}")
-        print(f"\n返信ステータス:")
-        print(df['返信ステータス'].value_counts())
-        print(f"\nマネタイズ機会:")
-        print(df['マネタイズ機会'].value_counts())
-        print(f"\nユーザー別メッセージ数:")
-        print(df['ユーザー名'].value_counts().head(10))
+        print(f"総メッセージ数: {len(rows)}")
         
     except Exception as e:
         print(f"レポート生成エラー: {e}")
