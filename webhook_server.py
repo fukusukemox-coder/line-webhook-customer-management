@@ -50,7 +50,8 @@ def get_google_sheets_client():
 def save_to_local_csv(data):
     """ローカルCSVファイルに保存"""
     import csv
-    csv_file = '/home/ubuntu/line_webhook/customer_data.csv'
+    # 相対パスを使用（Render.com環境対応）
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
     
     # ファイルが存在しない場合はヘッダーを書き込む
     file_exists = os.path.isfile(csv_file)
