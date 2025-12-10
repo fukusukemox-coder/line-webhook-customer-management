@@ -250,6 +250,92 @@ def index():
     """ルートパス"""
     return 'LINE Webhook Server is running!', 200
 
+@app.route('/download', methods=['GET'])
+def download_csv():
+    """ＣＳＶファイルをダウンロード"""
+    from flask import send_file
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
+    
+    if os.path.exists(csv_file):
+        return send_file(
+            csv_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'LINE顧客管理_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+    else:
+        return 'データがまだありません。LINEでメッセージを送信してください。', 404
+
+@app.route('/stats', methods=['GET'])
+def stats():
+    """統計情報を表示"""
+    csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
+    
+    if not os.path.exists(csv_file):
+        return 'データがまだありません', 404
+    
+    try:
+        import csv
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        
+        total_messages = len(rows)
+        needs_reply = sum(1 for row in rows if row.get('返信ステータス') == '要返信')
+        high_opportunities = sum(1 for row in rows if row.get('マネタイズ機会') == '高')
+        
+        users = set(row.get('ユーザー名', 'Unknown') for row in rows)
+        
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>LINE顧客管理システム - 統計</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                h1 {{ color: #00B900; }}
+                .stat {{ background: #f0f0f0; padding: 20px; margin: 10px 0; border-radius: 5px; }}
+                .stat h2 {{ margin: 0 0 10px 0; color: #333; }}
+                .stat p {{ margin: 5px 0; font-size: 24px; font-weight: bold; color: #00B900; }}
+                .download-btn {{ 
+                    display: inline-block;
+                    background: #00B900;
+                    color: white;
+                    padding: 15px 30px;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin-top: 20px;
+                }}
+                .download-btn:hover {{ background: #009900; }}
+            </style>
+        </head>
+        <body>
+            <h1>📊 LINE顧客管理システム</h1>
+            <div class="stat">
+                <h2>総メッセージ数</h2>
+                <p>{total_messages}件</p>
+            </div>
+            <div class="stat">
+                <h2>返信が必要なメッセージ</h2>
+                <p>{needs_reply}件</p>
+            </div>
+            <div class="stat">
+                <h2>高優先度マネタイズ機会</h2>
+                <p>{high_opportunities}件</p>
+            </div>
+            <div class="stat">
+                <h2>総顧客数</h2>
+                <p>{len(users)}名</p>
+            </div>
+            <a href="/download" class="download-btn">💾 CSVファイルをダウンロード</a>
+        </body>
+        </html>
+        '''
+        return html
+    except Exception as e:
+        return f'エラー: {e}', 500
+
 if __name__ == '__main__':
     # 環境変数の確認
     if not CHANNEL_ACCESS_TOKEN:
