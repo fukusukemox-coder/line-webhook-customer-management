@@ -56,6 +56,36 @@ def save_to_local_csv(data):
         import traceback
         traceback.print_exc()
 
+def send_reply_message(user_id, message_text):
+    """LINEユーザーに返信メッセージを送信"""
+    url = 'https://api.line.me/v2/bot/message/push'
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {CHANNEL_ACCESS_TOKEN}'
+    }
+    
+    data = {
+        'to': user_id,
+        'messages': [
+            {
+                'type': 'text',
+                'text': message_text
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=5)
+        if response.status_code == 200:
+            print(f"✅ メッセージ送信成功: {user_id}")
+            return True
+        else:
+            print(f"⚠️ メッセージ送信失敗: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ メッセージ送信エラー: {e}")
+        return False
+
 def get_user_profile(user_id):
     """LINEユーザーのプロフィールを取得"""
     url = f'https://api.line.me/v2/bot/profile/{user_id}'
@@ -74,6 +104,27 @@ def get_user_profile(user_id):
     except Exception as e:
         print(f"❌ プロフィール取得エラー: {e}")
         return 'Unknown'
+
+def get_auto_reply(message_text):
+    """キーワードベースの自動返信メッセージを取得"""
+    auto_replies = {
+        '営業時間': '営業時間は以下の通りです。\n\n月～金: 10:00 - 18:00\n土日祖: 定休日\n\nお気軽にお問い合わせください！',
+        '料金': '料金については、プロジェクトの内容や規模によって異なります。\n\n詳しいお見積もりをご希望の場合は、以下の情報をお知らせください。\n\n1. 映像の種類（企業紹介、イベント、商品PRなど）\n2. 映像の長さ\n3. 納期\n4. 使用目的\n\n担当者から詳しいお見積もりをお送りいたします！',
+        '価格': '料金については、プロジェクトの内容や規模によって異なります。\n\n詳しいお見積もりをご希望の場合は、以下の情報をお知らせください。\n\n1. 映像の種類（企業紹介、イベント、商品PRなど）\n2. 映像の長さ\n3. 納期\n4. 使用目的\n\n担当者から詳しいお見積もりをお送りいたします！',
+        '場所': '事務所の住所は以下の通りです。\n\n〔住所〕\n（ここに住所を入力してください）\n\nお越しの際は、事前にご連絡いただけると助かります！',
+        '住所': '事務所の住所は以下の通りです。\n\n〔住所〕\n（ここに住所を入力してください）\n\nお越しの際は、事前にご連絡いただけると助かります！',
+        'メニュー': '主なサービス内容は以下の通りです。\n\n■ 企業紹介映像\n■ 商品・SNS用動画\n■ イベント撮影\n■ ドローン空撮\n■ 動画編集\n\n詳しい内容やお見積もりは、お気軽にお問い合わせください！',
+        'サービス': '主なサービス内容は以下の通りです。\n\n■ 企業紹介映像\n■ 商品・SNS用動画\n■ イベント撮影\n■ ドローン空撮\n■ 動画編集\n\n詳しい内容やお見積もりは、お気軽にお問い合わせください！',
+        'ポートフォリオ': '制作実績は以下のリンクからご覧いただけます。\n\n（ここにポートフォリオのURLを入力してください）\n\nご不明な点があれば、お気軽にお問い合わせください！',
+        '実績': '制作実績は以下のリンクからご覧いただけます。\n\n（ここにポートフォリオのURLを入力してください）\n\nご不明な点があれば、お気軽にお問い合わせください！'
+    }
+    
+    # キーワードをチェック
+    for keyword, reply in auto_replies.items():
+        if keyword in message_text:
+            return reply
+    
+    return None
 
 def analyze_monetization_opportunity(message_text):
     """メッセージからマネタイズ機会を分析"""
@@ -138,6 +189,13 @@ def process_webhook_event(event):
             reply_status = check_reply_needed(message_content) if message_type == 'text' else '確認済み'
             monetization = analyze_monetization_opportunity(message_content) if message_type == 'text' else '-'
             
+            # キーワードベースの自動返信をチェック
+            if message_type == 'text':
+                auto_reply = get_auto_reply(message_content)
+                if auto_reply:
+                    send_reply_message(user_id, auto_reply)
+                    print(f"🤖 自動返信送信: {user_name}")
+            
             # タイムスタンプ
             timestamp = datetime.fromtimestamp(event['timestamp'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
             
@@ -177,6 +235,10 @@ def process_webhook_event(event):
             ]
             
             save_to_local_csv(data)
+            
+            # 自動挨拶メッセージを送信
+            welcome_message = f"{user_name}様\n\nこんにちは！映像制作 moX（もつく）です🎬\n\n友だち追加ありがとうございます！\n\nご質問やお見積もりなど、お気軽にメッセージをお送りください。\n担当者が確認次第、ご返信させていただきます。\n\nよろしくお願いいたします！"
+            send_reply_message(user_id, welcome_message)
             
             print(f"✅ 新規フォロー記録: {user_name}")
         
@@ -343,12 +405,129 @@ def stats():
                 <p>{len(users)}名</p>
             </div>
             <a href="/download" class="download-btn">💾 CSVファイルをダウンロード</a>
+            <a href="/broadcast" class="download-btn" style="background: #FF6B6B; margin-left: 10px;">📢 プッシュ配信</a>
         </body>
         </html>
         '''
         return html
     except Exception as e:
         return f'エラー: {e}', 500
+
+@app.route('/broadcast', methods=['GET', 'POST'])
+def broadcast():
+    """プッシュ配信ページ"""
+    from flask import render_template_string
+    
+    if request.method == 'POST':
+        message_text = request.form.get('message', '')
+        target_type = request.form.get('target_type', 'all')
+        
+        if not message_text:
+            return 'メッセージを入力してください', 400
+        
+        # CSVファイルから顧客リストを取得
+        csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
+        
+        if not os.path.exists(csv_file):
+            return '顧客データがありません', 404
+        
+        try:
+            import csv
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            
+            # ターゲットをフィルタリング
+            target_users = set()
+            for row in rows:
+                user_id = row.get('ユーザーID', '')
+                if not user_id or user_id == 'Unknown':
+                    continue
+                
+                if target_type == 'all':
+                    target_users.add(user_id)
+                elif target_type == 'high_priority':
+                    if row.get('マネタイズ機会') == '高':
+                        target_users.add(user_id)
+                elif target_type == 'needs_reply':
+                    if row.get('返信ステータス') == '要返信':
+                        target_users.add(user_id)
+                elif target_type == 'new_customers':
+                    if row.get('備考') == '新規顧客':
+                        target_users.add(user_id)
+            
+            # メッセージを送信
+            success_count = 0
+            for user_id in target_users:
+                if send_reply_message(user_id, message_text):
+                    success_count += 1
+            
+            return f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>配信完了</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    h1 {{ color: #00B900; }}
+                    .success {{ background: #d4edda; padding: 20px; border-radius: 5px; color: #155724; }}
+                    a {{ display: inline-block; margin-top: 20px; padding: 10px 20px; background: #00B900; color: white; text-decoration: none; border-radius: 5px; }}
+                </style>
+            </head>
+            <body>
+                <h1>✅ 配信完了</h1>
+                <div class="success">
+                    <p>対象: {len(target_users)}人</p>
+                    <p>成功: {success_count}人</p>
+                </div>
+                <a href="/stats">統計ページに戻る</a>
+            </body>
+            </html>
+            '''
+        except Exception as e:
+            return f'エラー: {e}', 500
+    
+    # GETリクエスト: 配信フォームを表示
+    html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>プッシュ配信</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #00B900; }
+            form { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+            label { display: block; margin-top: 15px; font-weight: bold; }
+            select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 3px; }
+            textarea { height: 150px; font-family: Arial, sans-serif; }
+            button { background: #00B900; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; font-size: 16px; }
+            button:hover { background: #009900; }
+            .back-btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>📢 プッシュ配信</h1>
+        <form method="POST">
+            <label for="target_type">配信対象:</label>
+            <select name="target_type" id="target_type">
+                <option value="all">全顧客</option>
+                <option value="high_priority">高優先度マネタイズ機会</option>
+                <option value="needs_reply">返信が必要な顧客</option>
+                <option value="new_customers">新規顧客</option>
+            </select>
+            
+            <label for="message">メッセージ:</label>
+            <textarea name="message" id="message" placeholder="配信するメッセージを入力してください..."></textarea>
+            
+            <button type="submit">📤 配信する</button>
+        </form>
+        <a href="/stats" class="back-btn">統計ページに戻る</a>
+    </body>
+    </html>
+    '''
+    return html
 
 if __name__ == '__main__':
     # 環境変数の確認
