@@ -237,7 +237,7 @@ def process_webhook_event(event):
             save_to_local_csv(data)
             
             # 自動挨拶メッセージを送信
-            welcome_message = f"{user_name}様\n\nこんにちは！映像制作 moX（もつく）です🎬\n\n友だち追加ありがとうございます！\n\nご質問やお見積もりなど、お気軽にメッセージをお送りください。\n担当者が確認次第、ご返信させていただきます。\n\nよろしくお願いいたします！"
+            welcome_message = f"{user_name}様\n\nこんにちは！映像制作 moX（もっくす）です🎬\n\n友だち追加ありがとうございます！\n\nご質問やお見積もりなど、お気軽にメッセージをお送りください。\n担当者が確認次第、ご返信させていただきます。\n\nよろしくお願いいたします！"
             send_reply_message(user_id, welcome_message)
             
             print(f"✅ 新規フォロー記録: {user_name}")
