@@ -11,6 +11,7 @@ from flask import Flask, request, abort
 import requests
 from threading import Thread
 
+
 app = Flask(__name__)
 
 # LINE設定
@@ -21,7 +22,7 @@ CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 SPREADSHEET_NAME = "LINE顧客管理システム"
 
 def save_to_local_csv(data):
-    """ローカルCSVファイルに保存"""
+    """ローカルCSVファイルに保存（BOM付きUTF-8）"""
     import csv
     # 相対パスを使用（Render.com環境対応）
     csv_file = os.path.join(os.path.dirname(__file__), 'customer_data.csv')
@@ -30,7 +31,8 @@ def save_to_local_csv(data):
     file_exists = os.path.isfile(csv_file)
     
     try:
-        with open(csv_file, 'a', newline='', encoding='utf-8') as f:
+        # BOM付きUTF-8で書き込み（Excelで正しく開けるようにする）
+        with open(csv_file, 'a', newline='', encoding='utf-8-sig') as f:
             writer = csv.writer(f)
             
             if not file_exists:
@@ -175,6 +177,7 @@ def process_webhook_event(event):
             ]
             
             save_to_local_csv(data)
+            
             print(f"✅ 新規フォロー記録: {user_name}")
         
         elif event['type'] == 'unfollow':
@@ -196,6 +199,7 @@ def process_webhook_event(event):
             ]
             
             save_to_local_csv(data)
+            
             print(f"✅ アンフォロー記録: {user_id}")
     
     except Exception as e:
