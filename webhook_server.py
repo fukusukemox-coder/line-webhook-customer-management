@@ -17,6 +17,7 @@ app = Flask(__name__)
 # LINE設定
 CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
 CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
+ADMIN_USER_ID = os.environ.get('ADMIN_USER_ID', '')  # 管理者のLINE USER ID
 
 # Google Sheets設定
 SPREADSHEET_NAME = "LINE顧客管理システム"
@@ -193,6 +194,23 @@ def check_reply_needed(message_text):
     
     return '確認済み'
 
+def is_business_hours():
+    """営業時間内かどうかを判定（10:00-18:00）"""
+    now = datetime.now()
+    hour = now.hour
+    return 10 <= hour < 18
+
+def send_admin_notification(user_name, message_content, monetization_level):
+    """管理者に高優先度顧客の通知を送信"""
+    if not ADMIN_USER_ID:
+        print("⚠️ ADMIN_USER_IDが設定されていません")
+        return
+    
+    notification_text = f"🚨 高優先度顧客からのメッセージ！\n\n👤 顧客名: {user_name}\n💰 優先度: {monetization_level}\n📝 メッセージ:\n{message_content}\n\n今すぐ対応してください！"
+    
+    send_reply_message(ADMIN_USER_ID, notification_text)
+    print(f"📢 管理者に通知送信: {user_name}")
+
 def process_webhook_event(event):
     """Webhookイベントを処理（バックグラウンド実行用）"""
     try:
@@ -235,6 +253,15 @@ def process_webhook_event(event):
                 if auto_reply:
                     send_reply_message(user_id, auto_reply)
                     print(f"🤖 自動返信送信: {user_name}")
+                # 営業時間外の場合は追加メッセージ
+                elif not is_business_hours():
+                    after_hours_message = "営業時間外のメッセージをありがとうございます。\n\n⏰ 営業時間: 10:00〜18:00\n\n翌営業時間内にご返信させていただきます。\nお急ぎの場合はその旨お知らせください！"
+                    send_reply_message(user_id, after_hours_message)
+                    print(f"🌙 営業時間外自動返信: {user_name}")
+                
+                # 高優先度顧客の場合は管理者に通知
+                if monetization == '高':
+                    send_admin_notification(user_name, message_content, monetization)
             
             # タイムスタンプ
             timestamp = datetime.fromtimestamp(event['timestamp'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
