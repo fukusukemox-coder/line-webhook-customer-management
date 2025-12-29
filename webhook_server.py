@@ -195,10 +195,17 @@ def check_reply_needed(message_text):
     return '確認済み'
 
 def is_business_hours():
-    """営業時間内かどうかを判定（10:00-18:00）"""
+    """営業時間内かどうかを判定（平日:9:00-21:00、土日祝:9:00-17:00）"""
     now = datetime.now()
     hour = now.hour
-    return 10 <= hour < 18
+    day_of_week = now.weekday()  # 0=月曜日, 6=日曜日
+    
+    # 土日祝日（5,6 = 土曜日、日曜日）
+    if day_of_week >= 5:
+        return 9 <= hour < 17
+    # 平日
+    else:
+        return 9 <= hour < 21
 
 def send_admin_notification(user_name, message_content, monetization_level):
     """管理者に高優先度顧客の通知を送信"""
@@ -255,7 +262,7 @@ def process_webhook_event(event):
                     print(f"🤖 自動返信送信: {user_name}")
                 # 営業時間外の場合は追加メッセージ
                 elif not is_business_hours():
-                    after_hours_message = "営業時間外のメッセージをありがとうございます。\n\n⏰ 営業時間: 10:00〜18:00\n\n翌営業時間内にご返信させていただきます。\nお急ぎの場合はその旨お知らせください！"
+                    after_hours_message = "営業時間外のメッセージをありがとうございます。\n\n⏰ 営業時間\n平日: 9:00〜21:00\n土日祝: 9:00〜17:00\n\n翌営業時間内にご返信させていただきます。\nお急ぎの場合はその旨お知らせください！"
                     send_reply_message(user_id, after_hours_message)
                     print(f"🌙 営業時間外自動返信: {user_name}")
                 
