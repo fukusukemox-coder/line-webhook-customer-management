@@ -10,6 +10,7 @@ from datetime import datetime
 from flask import Flask, request, abort
 import requests
 from threading import Thread
+import zoom_background_handler as zoom_handler
 
 
 app = Flask(__name__)
@@ -239,6 +240,28 @@ def process_webhook_event(event):
                 message_content = '[画像]'
             elif message_type == 'video':
                 message_content = '[動画]'
+                # Zoom背景用の動画かチェック
+                if user_id in zoom_handler.pending_requests:
+                    message_id = event['message']['id']
+                    video_path = zoom_handler.download_line_video(message_id, CHANNEL_ACCESS_TOKEN)
+                    if video_path:
+                        zoom_result = zoom_handler.handle_zoom_video_message(user_id, video_path)
+                        if zoom_result:
+                            if isinstance(zoom_result, dict) and zoom_result.get('success'):
+                                # 生成完了
+                                send_reply_message(user_id, zoom_result['message'])
+                                # 管理者に通知
+                                if ADMIN_USER_ID:
+                                    admin_msg = f"🎥 Zoom背景動画生成完了！\n\n👤 顧客: {zoom_result.get('message', '')}\n📹 動画: {zoom_result.get('video_path', '')}\n\n確認後、manage_requests.pyで配信してください。"
+                                    send_reply_message(ADMIN_USER_ID, admin_msg)
+                                print(f"✅ Zoom背景生成完了: {user_name}")
+                            else:
+                                # エラー
+                                send_reply_message(user_id, zoom_result.get('message', 'エラーが発生しました。'))
+                        else:
+                            # まだ動画が揃っていない
+                            if isinstance(zoom_result, str):
+                                send_reply_message(user_id, zoom_result)
             elif message_type == 'audio':
                 message_content = '[音声]'
             elif message_type == 'file':
@@ -254,17 +277,23 @@ def process_webhook_event(event):
             reply_status = check_reply_needed(message_content) if message_type == 'text' else '確認済み'
             monetization = analyze_monetization_opportunity(message_content) if message_type == 'text' else '-'
             
-            # キーワードベースの自動返信をチェック
+            # Zoom背景リクエストをチェック
             if message_type == 'text':
-                auto_reply = get_auto_reply(message_content)
-                if auto_reply:
-                    send_reply_message(user_id, auto_reply)
-                    print(f"🤖 自動返信送信: {user_name}")
-                # 営業時間外の場合は追加メッセージ
-                elif not is_business_hours():
-                    after_hours_message = "営業時間外のメッセージをありがとうございます。\n\n⏰ 営業時間\n平日: 9:00〜21:00\n土日祝: 9:00〜17:00\n\n翌営業時間内にご返信させていただきます。\nお急ぎの場合はその旨お知らせください！"
-                    send_reply_message(user_id, after_hours_message)
-                    print(f"🌙 営業時間外自動返信: {user_name}")
+                zoom_reply = zoom_handler.handle_zoom_text_message(user_id, message_content)
+                if zoom_reply:
+                    send_reply_message(user_id, zoom_reply)
+                    print(f"🎥 Zoom背景リクエスト処理: {user_name}")
+                else:
+                    # キーワードベースの自動返信をチェック
+                    auto_reply = get_auto_reply(message_content)
+                    if auto_reply:
+                        send_reply_message(user_id, auto_reply)
+                        print(f"🤖 自動返信送信: {user_name}")
+                    # 営業時間外の場合は追加メッセージ
+                    elif not is_business_hours():
+                        after_hours_message = "営業時間外のメッセージをありがとうございます。\n\n⏰ 営業時間\n平日: 9:00～21:00\n土日祝: 9:00～17:00\n\n翌営業時間内にご返信させていただきます。\nお急ぎの場合はその旨お知らせください！"
+                        send_reply_message(user_id, after_hours_message)
+                        print(f"🌙 営業時間外自動返信: {user_name}")
                 
                 # 高優先度顧客の場合は管理者に通知
                 if monetization == '高':
