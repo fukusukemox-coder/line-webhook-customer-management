@@ -11,6 +11,7 @@ from flask import Flask, request, abort
 import requests
 from threading import Thread
 import zoom_background_handler as zoom_handler
+import request_manager
 
 
 app = Flask(__name__)
@@ -281,10 +282,18 @@ def process_webhook_event(event):
             if message_type == 'text':
                 print(f"🔍 テキストメッセージ処理開始: {message_content}")
                 try:
-                    zoom_reply = zoom_handler.handle_zoom_text_message(user_id, message_content)
-                    if zoom_reply:
-                        send_reply_message(user_id, zoom_reply)
-                        print(f"🎥 Zoom背景リクエスト処理: {user_name}")
+                    # Zoom背景リクエストをチェック
+                    if message_content.startswith('Zoom背景'):
+                        # 名前を抽出
+                        customer_name = message_content.replace('Zoom背景', '').strip()
+                        if customer_name:
+                            # 依頼を記録
+                            request_manager.add_request(customer_name, user_id)
+                            reply_text = f"承知しました!「{customer_name}」様のZoom背景画像を作成します。\n\n画像・動画素材を送信してください。"
+                            send_reply_message(user_id, reply_text)
+                            print(f"🎥 Zoom背景リクエスト記録: {customer_name}")
+                        else:
+                            print(f"ℹ️ 名前が指定されていません")
                     else:
                         print(f"ℹ️ Zoom背景リクエストではない")
                 except Exception as e:
