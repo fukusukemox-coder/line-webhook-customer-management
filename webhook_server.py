@@ -279,11 +279,21 @@ def process_webhook_event(event):
             
             # Zoom背景リクエストをチェック
             if message_type == 'text':
-                zoom_reply = zoom_handler.handle_zoom_text_message(user_id, message_content)
-                if zoom_reply:
-                    send_reply_message(user_id, zoom_reply)
-                    print(f"🎥 Zoom背景リクエスト処理: {user_name}")
-                else:
+                print(f"🔍 テキストメッセージ処理開始: {message_content}")
+                try:
+                    zoom_reply = zoom_handler.handle_zoom_text_message(user_id, message_content)
+                    if zoom_reply:
+                        send_reply_message(user_id, zoom_reply)
+                        print(f"🎥 Zoom背景リクエスト処理: {user_name}")
+                    else:
+                        print(f"ℹ️ Zoom背景リクエストではない")
+                except Exception as e:
+                    print(f"❌ Zoomハンドラーエラー: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    zoom_reply = None
+                
+                if not zoom_reply:
                     # キーワードベースの自動返信をチェック
                     auto_reply = get_auto_reply(message_content)
                     if auto_reply:
