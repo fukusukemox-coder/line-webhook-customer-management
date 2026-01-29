@@ -281,6 +281,7 @@ def process_webhook_event(event):
             # Zoom背景リクエストをチェック
             if message_type == 'text':
                 print(f"🔍 テキストメッセージ処理開始: {message_content}")
+                zoom_reply = None  # 初期化
                 try:
                     # Zoom背景リクエストをチェック
                     if message_content.startswith('Zoom背景'):
